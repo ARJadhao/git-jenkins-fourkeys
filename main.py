@@ -1,16 +1,100 @@
-# This is a sample Python script.
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import builtins
+import hashlib
+import json
+
+from flask import Flask
+from flask.globals import request
+from google.cloud import bigquery
+import datetime
+
+app = Flask(__name__)
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def process_jenkins_event(request):
+
+    envelope = request.get_json()
+    headers = dict(request.headers)
+    source = "jenkins"
+    body = request.data
+    e_id = envelope.get("id")
+    epoch = envelope.get("timestamp")/1000
+    time_created = datetime.datetime.utcfromtimestamp(epoch).strftime('%Y-%m-%d %H:%M:%S')
+    msg_id = envelope.get("number")
+    metadata = {
+        "result": envelope.get("result"),
+        "url": envelope.get("url"),
+        "previousBuild": envelope.get("previousBuild")
+
+    }
+    msg = envelope.get("description")
+    signature = create_unique_id(msg)
+    build_event = {
+        "event_type": 'build',
+        "id": e_id,
+        "metadata": metadata,
+        "time_created": time_created,
+        "signature": signature,
+        "msg_id": msg_id,
+        "source": source,
+    }  
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('Hello world')
+    # Publish to Pub/Sub
+   # publish_to_pubsub(source, body, headers)
+    #insert_row_into_bigquery(build_event)
+    return build_event
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+def insert_row_into_bigquery(event):
+    if not event:
+        raise Exception("No data to insert")
+
+    # Set up bigquery instance
+    client = bigquery.Client()
+    dataset_id = "four_keys"
+    table_id = "events_raw"
+
+    if is_unique(client, event["signature"]):
+        table_ref = client.dataset(dataset_id).table(table_id)
+        table = client.get_table(table_ref)
+
+        # Insert row
+        row_to_insert = [
+            (
+                event["event_type"],
+                event["id"],
+                event["metadata"],
+                event["time_created"],
+                event["signature"],
+                event["msg_id"],
+                event["source"],
+            )
+        ]
+        bq_errors = client.insert_rows(table, row_to_insert)
+
+        # If errors, log to Stackdriver
+        if bq_errors:
+            entry = {
+                "severity": "WARNING",
+                "msg": "Row not inserted.",
+                "errors": bq_errors,
+                "row": row_to_insert,
+            }
+            print(json.dumps(entry))
+
+def show_the_login_form():
+    return 'showing login form'
+
+def create_unique_id(msg):
+    hashed = hashlib.sha1(bytes(json.dumps(msg), "utf-8"))
+    return hashed.hexdigest()
+
+def is_unique(client, signature):
+    sql = "SELECT signature FROM four_keys.events_raw WHERE signature = '%s'"
+    query_job = client.query(sql % signature)
+    results = query_job.result()
+    return not results.total_rows
+
+@app.route('/', methods=['POST'])
+def index():
+    return process_jenkins_event(request)  
