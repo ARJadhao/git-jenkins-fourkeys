@@ -42,7 +42,7 @@ def process_jenkins_event(request):
 
     # Publish to Pub/Sub
    # publish_to_pubsub(source, body, headers)
-    #insert_row_into_bigquery(build_event)
+    insert_row_into_bigquery(build_event)
     return build_event
 
 def insert_row_into_bigquery(event):
