@@ -32,7 +32,7 @@ def process_jenkins_event(request):
     build_event = {
         "event_type": 'build',
         "id": e_id,
-        "metadata": metadata,
+        "metadata": json.dumps(metadata),
         "time_created": time_created,
         "signature": signature,
         "msg_id": msg_id,
@@ -42,7 +42,7 @@ def process_jenkins_event(request):
 
     # Publish to Pub/Sub
    # publish_to_pubsub(source, body, headers)
-    insert_row_into_bigquery(build_event)
+    #insert_row_into_bigquery(build_event)
     return build_event
 
 def insert_row_into_bigquery(event):
