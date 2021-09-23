@@ -21,10 +21,13 @@ def process_jenkins_event(request):
     epoch = envelope.get("timestamp")/1000
     time_created = datetime.datetime.utcfromtimestamp(epoch).strftime('%Y-%m-%d %H:%M:%S')
     msg_id = envelope.get("number")
+    actions = envelope.get("actions")
+    main_commit = actions[3].get("lastBuiltRevision").get("SHA1")    
     metadata = {
         "result": envelope.get("result"),
         "url": envelope.get("url"),
-        "previousBuild": envelope.get("previousBuild")
+        "previousBuild": envelope.get("previousBuild"),
+        "pipeline.vcs.revision": main_commit
 
     }
     msg = envelope.get("description")
