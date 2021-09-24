@@ -27,7 +27,7 @@ def process_jenkins_event(request):
         "result": envelope.get("result"),
         "url": envelope.get("url"),
         "previousBuild": envelope.get("previousBuild"),
-        "pipeline.vcs.revision": main_commit
+        "mainCommit": main_commit
 
     }
     msg = envelope.get("description")
