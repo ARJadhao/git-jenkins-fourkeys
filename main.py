@@ -22,7 +22,7 @@ def process_jenkins_event(request):
     time_created = datetime.datetime.utcfromtimestamp(epoch).strftime('%Y-%m-%d %H:%M:%S')
     msg_id = envelope.get("number")
     actions = envelope.get("actions")
-    main_commit = actions[3].get("lastBuiltRevision").get("SHA1")    
+    main_commit = actions[4].get("lastBuiltRevision").get("SHA1")    
     metadata = {
         "result": envelope.get("result"),
         "url": envelope.get("url"),
