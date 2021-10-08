@@ -30,7 +30,7 @@ def process_jenkins_event(request):
         "mainCommit": main_commit
 
     }
-    msg = envelope.get("description")
+    msg = envelope.get("fullDisplayName")
     signature = create_unique_id(msg)
     build_event = {
         "event_type": 'build',
